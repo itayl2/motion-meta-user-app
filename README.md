@@ -21,18 +21,38 @@ This is a simple application meant to fetch basic user information from Meta's /
 ## Main Components
 ### App
 #### App Handler (`AppHandler`)
-Main entry point of the application.
+- Main entry point of the application. 
+- Initializes all required components and starts the service (which runs on interval by default). 
+- Serves as an entry point for a request or event to trigger the service on demand as well (see below)
 
-It initializes all required components and starts the service.
+##### Lambda Handler (?)
+To support operation in a serverless environment, it would involve some changes to the container initialization to handle statelessness and cold starts. Since initialization is minor in this application, statelessness can be easily implemented, and would ideally be used in batching, wherein each time the Lambda is triggered, it receives a batch of customers / entities to handle. So we could for example:
+- Submit an array of customer names every 2s via an AWS EventBridge Event
+- The event triggers them all as separate instances of `MetaUserService.runOnce()`
+- Awaits `Promise.all()` for all of them
+- Event handling ends
 
-It also serves as an entry point for a request or event to prompt the data fetching process on demand.
+This however depends on the amount of customers and interval.
+If we end up running it too often, it makes more sense (costs, operations) to run a normal, stateful environment.
 
-To support operation in a serverless environment, it would involve some changes to the container initialization to handle statelessness and cold starts.
+The same principle applies to stateful environments; we would trigger the operation via AppHandler.handleRequest() on demand as web server / cronjob.
+
+
+### Config
+Config is loaded based on environment variables with fallback values.
+The config allows for easy, no-code changes to the application's behavior, such as:
+- How rate limiting is identified
+- How rate limiting is handled
+- How retries are handled per platform (e.g Meta), and per endpoint of platform (e.g /me). Endpoint config is optional and is merged based on platform config.
+
+#### Dot Env (.env)
+- Used to load environment variables from a `.env` file for local development.
+- See sample at `.env.sample`
 
 ### Storage
 #### DynamoDB (`DynamoDBClient`)
 - Used for fetching customer data from the database.
-- Currently mocked to keep this demo implementation short, so it always returns a customer called `motion_test_user`.
+- Currently, mocked to keep this demo implementation short, so it always returns a customer called `motion_test_user`.
 
 #### Redis (`CacheStorage`)
 - Caching credentials
@@ -41,7 +61,7 @@ To support operation in a serverless environment, it would involve some changes 
 
 #### Secrets Manager (`SecretsManager`)
 - Used for fetching the credentials based on customer name from AWS Secrets Manager.
-- Currently mocked to keep this demo implementation short.
+- Currently, mocked to keep this demo implementation short.
 
 
 #### Credentials Manager (`CredentialsManager`)
@@ -72,7 +92,7 @@ It fetches the credentials via Secrets Manager when it is either missing from me
 
 
 ### TODO
-#### Major
+#### Major: Things I would normally implement in a non-demo scenario and should be handled first
 - Docker: Create a Dockerfile to prepare this application to run in a containerized environment.
 - Metrics: Implement Prometheus metrics to in the various "TODO" lines across the code. Normally these lines would translate into work tickets with details, but for the purposes of this demo they were left there to clarify where metrics would be used.
 - Redis: Mocked for this demo using a map, but in a real-world scenario it would be replaced with a real Redis instance (or at least a local-stack)
@@ -88,7 +108,7 @@ It fetches the credentials via Secrets Manager when it is either missing from me
   - Per Motion requirements, handle sensitive data in error logs
 
 
-#### Minor
+#### Minor: Tweaks and extra information or changes that would are "nice to have"
 - Consult Motion whether we want to slow down per app usage stats by Meta even before throttling. If so, requires some business logic and numbers.
 - Consult Motion about how rate limiting affects the application - how many token do we have, is it one per customer, one per app, one per area of the company, etc. This affects how we want to moderate our behavior to handle / avoid throttling.
 - Add validation (Joi?) for bodies and headers returned by Meta, to ensure we're not missing any fields or getting unexpected values.

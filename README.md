@@ -112,7 +112,7 @@ This design of Credentials Manager operation enables us to have the credentials 
 
 #### Minor: Tweaks and extra information or changes that would are "nice to have"
 - Consult Motion whether we want to slow down per app usage stats by Meta even before throttling. If so, requires some business logic and numbers.
-- Consult Motion about how rate limiting affects the application - how many token do we have, is it one per customer, one per app, one per area of the company, etc. This affects how we want to moderate our behavior to handle / avoid throttling.
+- Consult Motion about how rate limiting affects the application - how many tokens do we have, is it one per customer, one per app, one per area of the company, etc. This affects how we want to moderate our behavior to handle / avoid throttling.
 - Add validation (Joi?) for bodies and headers returned by Meta, to ensure we're not missing any fields or getting unexpected values.
 - Find examples of sub codes by Meta
 - A few other minor TODOs in the code not currently important enough to mention in this readme of this demo.

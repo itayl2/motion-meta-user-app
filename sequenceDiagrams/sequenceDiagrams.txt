@@ -1,0 +1,89 @@
+title MetaUserService Run: run()
+
+MetaUserService->MetaUserAgent:runOnce() Calls the relevant Meta agent class to getUserInfo()
+MetaUserAgent->MetaRequestManager: Uses a requests manager to execute the fetch request
+MetaRequestManager->MetaUserAgent: Returns response / error after managed flow ends
+MetaUserAgent->MetaUserService: Unpacks the response / error and returns, service handles error / updates DB
+
+
+title MetaRequestManager Run: execute() (Happy Path)
+
+Check for Redis locks->Fetch token from cache:No locks
+Fetch token from cache->Axios: Trigger
+Axios->Meta: Send request
+Meta->Axios: HTTP code between 200 and 299
+Axios->End: Returns parsed response
+
+
+title MetaRequestManager Run: execute() (new throttling)
+
+Check for Redis locks->Fetch token from cache:If no locks
+Fetch token from cache->Axios: Execute, error if status not 200-299
+note over Axios,MetaAxiosError: error code / msg, http code
+Axios->MetaAxiosError: Error is identified as throttling
+MetaAxiosError->MetaRequestManager: Wait time according to config / response
+note over MetaRequestManager,Redis: **1st lock**: Throttling to stop attempts globally, no overwrite
+note over MetaRequestManager,Redis: **2nd lock**: Throttling recovery check, to allow only one instance
+note over MetaRequestManager,Redis: 2nd lock is written by the instance **only if 1st was written by it**
+MetaRequestManager->Redis: Set 1st throttling lock
+MetaRequestManager->Redis: Set 2nd lock
+Redis->Check for Redis locks: Await both locks on retry
+
+
+title MetaRequestManager Run: execute() (existing throttling)
+
+Check for 1st Redis lock->Fetch 2nd Redis lock value: 1st Lock found, waiting
+Fetch 2nd Redis lock value->Await 2nd Redis lock: value !== self.taskId
+note over Fetch 2nd Redis lock value,Await 2nd Redis lock: The instance with self.taskId === value working to confirm that throttling is gone
+Await 2nd Redis lock->Fetch token from cache: Fetch token from cache
+note over Await 2nd Redis lock,Fetch token from cache: The instance with self.taskId == value confirmed, releases both locks
+
+title MetaRequestManager Run: execute() (existing throttling, selected instance)
+
+Check for 1st Redis lock->Fetch 2nd Redis lock value: 1st Lock found, waiting
+Fetch 2nd Redis lock value->Retry: value === self.taskId, selected instance
+note over Fetch 2nd Redis lock value,Retry: Other instances will await the existing locks
+Retry->Check for 1st Redis lock: More throttling,
+Retry->Throttling Response:
+Throttling Response->Check for 1st Redis lock: locks re-applied, recursion continues
+Retry->No Throttling:
+No Throttling->Redis: Locks released, all instances continue
+
+title MetaRequestManager Run: execute() (error, no throttling)
+
+Check for Redis locks->Fetch token from cache:No locks
+Fetch token from cache->Axios: Send request
+Axios->MetaAxiosError: Response / connectivity error
+MetaAxiosError->Fetch token from cache: Backoff & retry based on config
+MetaAxiosError->End: Config dictates no retries, error thrown
+
+
+title Overview Flow
+
+MetaUserService->MetaUserAgent: On interval / demand
+MetaUserAgent->MetaRequestManager:Agent submits config and Axios instance
+MetaRequestManager->Redis: Confirm no throttling
+MetaRequestManager->Meta: Fetch via Axios
+Meta->MetaRequestManager: Error / OK
+note over MetaRequestManager,Meta: Retry based on config & error analysis (if not throttled)
+MetaRequestManager->Redis: Lock if throttled, await lock
+MetaRequestManager->MetaUserAgent: Return Axios response
+MetaUserAgent->MetaUserService: Return in uniform structure
+MetaUserService->DynamoDB: Store parsed result
+note over MetaUserService: setTimeout for the next task
+
+
+title MetaRequestManager Run: populateAccessToken()
+
+MetaRequestManager->CredentialsManager: get by customer name
+CredentialsManager->Redis: Check if expired
+CredentialsManager->SecretsManager: If expired or missing from memory, fetch
+SecretsManager->CredentialsManager: Store in memory
+CredentialsManager->MetaRequestManager: Return token
+
+title Shutdown Flow
+
+Signal->AppHandler: SIGTERM / SIGINT
+AppHandler->MetaUserService: Stop service (no more interval-based tasks)
+AppHandler->Redis: Release all locks set by this instance
+AppHandler->Redis: Close connection

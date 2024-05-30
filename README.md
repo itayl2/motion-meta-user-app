@@ -68,10 +68,12 @@ The config allows for easy, no-code changes to the application's behavior, such 
 - Utilizes Redis & Secrets Manager to fetch and store credentials in memory.
 
 The state of the credentials is managed by Redis, so that we can:
-- Expire credentials after a certain amount of time
+- Expire credentials after a certain amount of time after having replaced them in Secrets Manager (allowing for rotation)
 - Expire credentials of deleted / disabled customers
 
 It fetches the credentials via Secrets Manager when it is either missing from memory or when it is expired according to Redis, and then stores it in memory.
+
+This design of Credentials Manager operation enables us to have the credentials managed by a separate service in a microservices architecture; a service which would populate Secrets Manager and expire / remove keys in Redis, thus prompting this application to re-fetch from AWS Secrets before issuing a request.
 
 ### Request Management (`RequestManager`)
 #### Meta Request Management (`MetaRequestManager` implements `RequestManager`)

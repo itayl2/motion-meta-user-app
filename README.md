@@ -57,7 +57,7 @@ The config allows for easy, no-code changes to the application's behavior, such 
 #### Redis (`CacheStorage`)
 - Caching credentials
 - Locks to moderate requests globally in response to rate limiting
-- Mocked to keep this demo implementation short. Mocked without `redis-mock` due to its specific implementation and capabilities.
+- Mocked to keep this demo implementation short. Mocked without `redis-mock` due to its specific implementation and capabilities, and without `redis-memory-server` due to its limitations on Windows (which may be the target machine of the Motion developer)
 
 #### Secrets Manager (`SecretsManager`)
 - Used for fetching the credentials based on customer name from AWS Secrets Manager.

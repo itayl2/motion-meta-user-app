@@ -96,7 +96,7 @@ This design of Credentials Manager operation enables us to have the credentials 
 ### TODO
 #### Major: Things I would normally implement in a non-demo scenario and should be handled first
 - Docker: Create a Dockerfile to prepare this application to run in a containerized environment.
-- Metrics: Implement Prometheus metrics in the various "TODO" lines across the code. Normally these lines would translate into work tickets with details, but for the purposes of this demo they were left there to clarify where metrics would be used.
+- Metrics: Implement Prometheus metrics in the various "TODO" lines across the code. Normally these lines would be replaced by work tickets with details, but for the purposes of this demo they were left there to clarify where metrics would be used.
 - Redis: Mocked for this demo using a map, but in a real-world scenario it would be replaced with a real Redis instance (or at least a local-stack)
 - DynamoDB: The data is currently mocked, but in a real-world scenario it would be replaced with a real DynamoDB instance (or at least a local-stack)
 - Secrets Manager: The data is currently mocked, but in a real-world scenario it would be replaced with an aws-sdk client for AWS Secrets Manager

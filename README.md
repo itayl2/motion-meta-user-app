@@ -116,4 +116,4 @@ This design of Credentials Manager operation enables us to have the credentials 
 - Add validation (Joi?) for bodies and headers returned by Meta, to ensure we're not missing any fields or getting unexpected values.
 - Find examples of sub codes by Meta
 - A few other minor TODOs mentioned in the code not currently important enough to mention in this readme of this demo.
-- Fix all relative paths to @/ instead of `../../` and others, including the built code. Didn't have time to handle my environment for this.
+- Fix all relative paths to `@/` instead of `../../` and others, including the built code. Didn't have time to handle my environment for this.
